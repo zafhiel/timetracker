@@ -11,7 +11,6 @@ toml_data = {
     },
     "options": {
         "project": "project exact name",
-        "assignment": "Software Development",
         "focal": "focal exact name",
     }
 }
