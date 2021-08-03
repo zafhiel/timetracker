@@ -43,16 +43,16 @@ today = date.today().strftime("%d/%m/%Y")
 # 12: Client Meeting
 
 activities = [
-    # ("Implement new environment", 1, 10),
-    # ("Implement new environment", 1, 10),
-    # ("Implement new environment", 1, 10),
+    ("Implement new environment", 1, 10),
+    ("Implement new environment", 1, 10),
+    ("Implement new environment", 1, 10),
     ("Meet Vacation Plan", 0.5, 12),
-    # ("Analysis Ticket issues", 1, 11),
-    # ("Analysis Ticket issues", 1, 11),
-    # ("Analysis Ticket issues", 1, 11),
-    # ("Testing ticket", 0.5, 1),
-    # ("Testing ticket", 1, 1),
-    # ("Testing ticket", 1, 1),
+    ("Analysis Ticket issues", 1, 11),
+    ("Analysis Ticket issues", 1, 11),
+    ("Analysis Ticket issues", 1, 11),
+    ("Testing ticket", 0.5, 1),
+    ("Testing ticket", 1, 1),
+    ("Testing ticket", 1, 1),
 ]
 
 for track in activities:
