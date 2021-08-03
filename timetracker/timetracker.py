@@ -11,11 +11,13 @@ from beautifultable import BeautifulTable
 from bs4 import BeautifulSoup
 
 from .constants import (
-    PROJECT_DROPDOWN, FOCAL_DROPDOWN, ASSIGNMENT_DROPDOWN, LOGIN_CREDENTIALS, LOAD_HOURS_OPTIONS, WEEKDAYS, BASE_URL
+    PROJECT_DROPDOWN, FOCAL_DROPDOWN, TASK_CATEGORY_DROPDOWN, TASK_DESCRIPTION_DROPDOWN, DICT_TASKS, LOGIN_CREDENTIALS,
+    LOAD_HOURS_OPTIONS, WEEKDAYS, BASE_URL
 )
 from .utils import parse_date
 
 requests.packages.urllib3.disable_warnings()
+
 
 def prepare_session(session):
     """
@@ -60,7 +62,7 @@ def load_time_form(session):
     """
     Go to the load time form.
     """
-    load_time_url = '{}/CargaTimeTracker.aspx'.format(BASE_URL)
+    load_time_url = '{}/TimeTrackerAdd.aspx'.format(BASE_URL)
     content = session.get(load_time_url).content
     return BeautifulSoup(content, 'html.parser')
 
@@ -106,7 +108,7 @@ def set_project(session, form, project_option):
     """
     Sets the project into the session so that assignments and focal points become available.
     """
-    load_time_url = '{}/CargaTimeTracker.aspx'.format(BASE_URL)
+    load_time_url = '{}/TimeTrackerAdd.aspx'.format(BASE_URL)
     load_assigments_args = {
         'ctl00$ContentPlaceHolder$ScriptManager': 'ctl00$ContentPlaceHolder$UpdatePanel1|ctl00$ContentPlaceHolder$idProyectoDropDownList',
         '__VIEWSTATE': form.find('input', {'name': '__VIEWSTATE'}).get('value'),
@@ -118,6 +120,53 @@ def set_project(session, form, project_option):
         'ctl00$ContentPlaceHolder$TiempoTextBox': '',
         'ctl00$ContentPlaceHolder$idTipoAsignacionDropDownList': '',
         'ctl00$ContentPlaceHolder$idFocalPointClientDropDownList': '',
+        '__ASYNCPOST': 'true'
+    }
+    content = session.post(load_time_url, data=load_assigments_args).content
+
+    _eventtarget = re.search(
+        r'hiddenField\|__EVENTTARGET\|([\w*/*\+*=*]*)', str(content)).groups()[0]
+    _eventargument = re.search(
+        r'hiddenField\|__EVENTARGUMENT\|([\w*/*\+*=*]*)', str(content)).groups()[0]
+    _lastfocus = re.search(
+        r'hiddenField\|__LASTFOCUS\|([\w*/*\+*]*=*)', str(content)).groups()[0]
+    _viewstate = re.search(
+        r'hiddenField\|__VIEWSTATE\|([\w*/*\+*]*=*)', str(content)).groups()[0]
+    _viewstategenerator = re.search(
+        r'hiddenField\|__VIEWSTATEGENERATOR\|([\w*/*\+*=*]*)', str(content)).groups()[0]
+    _eventvalidation = re.search(
+        r'hiddenField\|__EVENTVALIDATION\|([\w*/*\+*]*=*)', str(content)).groups()[0]
+    secrets = {
+        '__EVENTTARGET': _eventtarget,
+        '__EVENTARGUMENT': _eventargument,
+        '__LASTFOCUS': _lastfocus,
+        '__VIEWSTATE': _viewstate,
+        '__VIEWSTATEGENERATOR': _viewstategenerator,
+        '__EVENTVALIDATION': _eventvalidation,
+
+    }
+
+    return secrets, BeautifulSoup(content, 'html.parser')
+
+
+def set_task_category(session, form, project_option, task_category_option):
+    """
+    Sets the project into the session so that assignments and focal points become available.
+    """
+    load_time_url = '{}/TimeTrackerAdd.aspx'.format(BASE_URL)
+    load_assigments_args = {
+        'ctl00$ContentPlaceHolder$ScriptManager': 'ctl00$ContentPlaceHolder$UpdatePanel1|ctl00$ContentPlaceHolder$idProyectoDropDownList',
+        '__VIEWSTATE': form.find('input', {'name': '__VIEWSTATE'}).get('value'),
+        '__VIEWSTATEGENERATOR': form.find('input', {'name': '__VIEWSTATEGENERATOR'}).get('value'),
+        '__EVENTVALIDATION': form.find('input', {'name': '__EVENTVALIDATION'}).get('value'),
+        'ctl00$ContentPlaceHolder$txtFrom': parse_date('today').strftime(r'%d/%m/%Y'),
+        'ctl00$ContentPlaceHolder$idProyectoDropDownList': project_option,
+        'ctl00$ContentPlaceHolder$CommentsTextBox': '',
+        'ctl00$ContentPlaceHolder$TiempoTextBox': '',
+        'ctl00$ContentPlaceHolder$idCategoriaTareaXCargoLaboralDropDownList': task_category_option,
+        'ctl00$ContentPlaceHolder$idTareaXCargoLaboralDownList': '',
+        'ctl00$ContentPlaceHolder$idFocalPointClientDropDownList': '',
+
         '__ASYNCPOST': 'true'
     }
     content = session.post(load_time_url, data=load_assigments_args).content
@@ -179,20 +228,22 @@ def hours_as_table(content, current_month, full, show_weekday):
 
     if full:
         values = ["" for i in range(len(column_headers))]
-        values[column_headers.index("Hours")] = rows[-1].find_all('td')[1].string if len(rows[-1].find_all('td')) > 1 else 0.0
+        values[column_headers.index("Hours")] = rows[-1].find_all('td')[1].string if len(
+            rows[-1].find_all('td')) > 1 else 0.0
         table.append_row(values)
     return table
 
 
 def actually_load(session, secrets, options):
-    load_time_url = '{}/CargaTimeTracker.aspx'.format(BASE_URL)
+    load_time_url = '{}/TimeTrackerAdd.aspx'.format(BASE_URL)
     load_time_args = copy(secrets)
     load_time_args.update({
         'ctl00$ContentPlaceHolder$txtFrom': options['date'],
         'ctl00$ContentPlaceHolder$idProyectoDropDownList': options['project'],
-        'ctl00$ContentPlaceHolder$DescripcionTextBox': options['text'],
+        'ctl00$ContentPlaceHolder$CommentsTextBox': options['text'],
         'ctl00$ContentPlaceHolder$TiempoTextBox': options['hours'],
-        'ctl00$ContentPlaceHolder$idTipoAsignacionDropDownList': options['assignment'],
+        'ctl00$ContentPlaceHolder$idCategoriaTareaXCargoLaboralDropDownList': options['task_category'],
+        'ctl00$ContentPlaceHolder$idTareaXCargoLaboralDownList': options['task_description'],
         'ctl00$ContentPlaceHolder$idFocalPointClientDropDownList': options.get('focal'),
         'ctl00$ContentPlaceHolder$btnAceptar': 'Accept'
     })
@@ -229,7 +280,7 @@ def load_csv_hours(csv_file, config):
         load_hours(config=config, **row)
 
 
-def load_hours(text, config, date, pto, vacations, hours):
+def load_hours(text, config, date, pto, vacations, hours, kind):
     config = toml.load(config)
     credentials = config.get('credentials')
     options = config.get('options')
@@ -244,8 +295,8 @@ def load_hours(text, config, date, pto, vacations, hours):
         hours = options.get('hours')
 
     if hours is None:
-        raise click.BadParameter("You need to specify hours amount with --hours (-h) or using hours options in config.toml")
-
+        raise click.BadParameter(
+            "You need to specify hours amount with --hours (-h) or using hours options in config.toml")
 
     if pto:
         options['project'] = 'BairesDev - Absence'
@@ -272,17 +323,31 @@ def load_hours(text, config, date, pto, vacations, hours):
         'Project',
         PROJECT_DROPDOWN
     )
-    secrets, load_assigments_page = set_project(session, load_time_page, project_option)
-    assignment_option = validate_option(
+
+    _, load_assigments_page = set_project(session, load_time_page, project_option)
+
+    task_category_text, task_description_text = DICT_TASKS[kind]
+
+    task_category = validate_option(
         load_assigments_page,
-        options.get('assignment'),
-        'Assignment',
-        ASSIGNMENT_DROPDOWN
+        task_category_text,
+        'Task Category',
+        TASK_CATEGORY_DROPDOWN
+    )
+
+    secrets, load_assigments_page = set_task_category(session, load_time_page, project_option, task_category)
+
+    task_description = validate_option(
+        load_assigments_page,
+        task_description_text,
+        'Task Category',
+        TASK_DESCRIPTION_DROPDOWN
     )
 
     data = {
         'project': project_option,
-        'assignment': assignment_option,
+        'task_category': task_category,
+        'task_description': task_description,
         'text': text,
         'date': date,
         'hours': hours
