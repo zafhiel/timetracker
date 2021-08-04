@@ -27,6 +27,6 @@ DICT_TASKS = {
 }
 
 LOGIN_CREDENTIALS = ['username', 'password']
-LOAD_HOURS_OPTIONS = ['project', 'assignment', 'focal']
+LOAD_HOURS_OPTIONS = ['project', 'focal']
 
 WEEKDAYS = ['M', 'T', 'W', 'TH', 'F', 'S', 'SU']
